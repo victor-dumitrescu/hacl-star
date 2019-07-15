@@ -2,8 +2,10 @@ FSTAR_HOME   ?= ../../../../FStar
 KREMLIN_HOME ?= ../../../../kremlin
 HACL_HOME    ?= ../../..
 
+CACHE_DIR = $(HACL_HOME)/.cache
+HINT_DIR = $(HACL_HOME)/.hints
 OUTPUT_DIR = .output
-GENERATED_DIR = ../dump
+GENERATED_DIR = $(HACL_HOME)/build/c
 
 FSTAR_INCLUDE_DIRS = \
   $(HACL_KREMLIN) \
@@ -11,11 +13,16 @@ FSTAR_INCLUDE_DIRS = \
   $(HACL_HOME)/specs \
   $(HACL_HOME)/specs/lemmas \
   $(HACL_HOME)/lib \
+  $(HACL_HOME)/code/utils \
   $(HACL_HOME)/code/curve25519 \
   $(HACL_HOME)/code/curve25519/lemmas \
+  $(HACL_HOME)/code/nacl-box \
+  $(HACL_HOME)/code/chacha20 \
+  $(HACL_HOME)/code/poly1305 \
+  $(HACL_HOME)/code/blake2b \
 
 FSTAR_FLAGS = --cmi \
-  --cache_checked_modules --odir $(OUTPUT_DIR) \
+  --cache_checked_modules --cache_dir $(CACHE_DIR) --odir $(OUTPUT_DIR) \
   --already_cached "'Prims+FStar+LowStar+C+Spec.Loops+TestLib+Lib'" \
   $(addprefix --include ,$(FSTAR_INCLUDE_DIRS))
 
@@ -26,12 +33,12 @@ SNAPSHOT=Tezos.fst
 all:
 	make $(GENERATED_DIR)/Tezos.c
 
-.depend:
+.depend: | .depend $(CACHE_DIR)
 	$(FSTAR) --dep full $(SNAPSHOT) --extract '* -Prims -FStar -LowStar -Spec' > $@
 
 include .depend
 
-%.checked: | .depend $(HINT_DIR)
+%.checked: | .depend
 	$(FSTAR) $< $(ENABLE_HINTS) --hint_file $(HINT_DIR)/$(notdir $*).hints && \
 	touch -c $@
 
@@ -51,5 +58,6 @@ $(GENERATED_DIR)/Tezos.c: .output/Tezos.krml | .depend
 	-bundle 'Lib.*' \
 	-bundle 'Spec.*' \
 	-drop 'FStar.UInt128,LowStar,Spec,Prims,Lib,C.Loops.*,C.*,C,FStar.*,Hacl.Spec.*' \
+	-ctypes 'Tezos' \
 	-tmpdir $(GENERATED_DIR) \
 	$^

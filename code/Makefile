@@ -1,6 +1,7 @@
 KREMLIN_HOME ?= ../../kremlin
 HACL_HOME    ?= ..
 BUILD_DIR = $(HACL_HOME)/build/c
+CACHE_DIR = $(HACL_HOME)/.cache
 
 
 .PHONY: extract-%
@@ -37,7 +38,8 @@ snapshot: extract-poly1305 extract-chacha20 extract-curve25519 extract-blake2s e
 	cp -r curve25519/rfc7748_src $(BUILD_DIR)/test
 	cp Makefile.snapshot $(BUILD_DIR)/Makefile
 
-tezos-snapshot: snapshot
+tezos-snapshot: extract-poly1305 extract-chacha20 extract-curve25519 extract-nacl-box extract-blake2b
+	make -C utils
 	make -C snapshot
 
 test-snapshot: snapshot
