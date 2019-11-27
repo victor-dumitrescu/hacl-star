@@ -626,30 +626,18 @@ val load_felem4_le:
       felem_fits h1 f (1, 1, 1, 1, 1) /\
       felem_less h1 f (pow2 128) /\
       feval h1 f == Vec.load_elem4 (as_seq h0 b))
-let load_felem4_le f b = admit();
-  let mask26 = mask26 4 in
+let load_felem4_le f b =
+  let h0 = ST.get () in
   let lo = vec_load_le U64 4 (sub b 0ul 32ul) in
   let hi = vec_load_le U64 4 (sub b 32ul 32ul) in
-  let m0 = vec_interleave_low_n 2 lo hi in
-  let m1 = vec_interleave_high_n 2 lo hi in
-  let m2 = cast U64 4 (vec_shift_right (cast U128 2 m0) 48ul) in
-  let m3 = cast U64 4 (vec_shift_right (cast U128 2 m1) 48ul) in
-  let m4 = vec_interleave_high m0 m1 in
-  let t0 = vec_interleave_low m0 m1 in
-  let t3 = vec_interleave_low m2 m3 in
-  let t2 = vec_shift_right t3 4ul in
-  let o2 = vec_and t2 mask26 in
-  let t1 = vec_shift_right t0 26ul in
-  let o1 = vec_and t1 mask26 in
-  let o5 = vec_and t0 mask26 in
-  let t3 = vec_shift_right t3 30ul in
-  let o3 = vec_and t3 mask26 in
-  let o4 = vec_shift_right m4 40ul in
-  f.(0ul) <- o5;
+  let (o0, o1, o2, o3, o4) = load_felem5_4 lo hi in
+  load_felem5_le (as_seq h0 b);
+  f.(0ul) <- o0;
   f.(1ul) <- o1;
   f.(2ul) <- o2;
   f.(3ul) <- o3;
   f.(4ul) <- o4
+
 
 inline_for_extraction noextract
 val load_felems_le:

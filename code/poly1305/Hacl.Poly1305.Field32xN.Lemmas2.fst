@@ -219,6 +219,137 @@ let load_felem5_lemma_i #w lo hi i =
   assert (as_tup64_i (load_felem5 #w lo hi) i == load_tup64_lemma (vec_v lo).[i] (vec_v hi).[i])
 
 
+val load_tup64_4_compact: lo:uint64 -> hi:uint64 -> tup64_5
+let load_tup64_4_compact lo hi =
+  let mask26 = u64 0x3ffffff in
+  let t3 = (lo >>. 48ul) |. (hi <<. 16ul) in
+  let o0 = lo &. mask26 in
+  let o1 = (lo >>. 26ul) &. mask26 in
+  let o2 = (t3 >>. 4ul) &. mask26 in
+  let o3 = (t3 >>. 30ul) &. mask26 in
+  let o4 = hi >>. 40ul in
+  (o0, o1, o2, o3, o4)
+
+val load_tup64_4_compact_lemma_f2_mod: lo:uint64 -> hi:uint64 -> Lemma
+  ((v lo / pow2 52 + (v hi % pow2 14) * pow2 12) % pow2 26 == v lo / pow2 52 + (v hi % pow2 14) * pow2 12)
+let load_tup64_4_compact_lemma_f2_mod lo hi =
+  calc (<) {
+    v lo / pow2 52 + (v hi % pow2 14) * pow2 12;
+    (<) { Math.Lemmas.lemma_div_lt (v lo) 64 52 }
+    pow2 12 + (v hi % pow2 14) * pow2 12;
+    (<=) { Math.Lemmas.lemma_mult_le_right (pow2 12) (v hi % pow2 14) (pow2 14 - 1) }
+    pow2 12 + (pow2 14 - 1) * pow2 12;
+    (==) { Math.Lemmas.distributivity_sub_left (pow2 14) 1 (pow2 12); Math.Lemmas.pow2_plus 14 12 }
+    pow2 26;
+  };
+  assert (v lo / pow2 52 + (v hi % pow2 14) * pow2 12 < pow2 26);
+  Math.Lemmas.small_modulo_lemma_1 (v lo / pow2 52 + (v hi % pow2 14) * pow2 12) (pow2 26)
+
+
+val load_tup64_4_compact_lemma_f2: lo:uint64 -> hi:uint64 -> Lemma
+  (let t3 = (lo >>. 48ul) |. (hi <<. 16ul) in
+   v ((t3 >>. 4ul) &. u64 0x3ffffff) == v lo / pow2 52 + (v hi % pow2 14) * pow2 12)
+
+let load_tup64_4_compact_lemma_f2 lo hi =
+  let t3 = (lo >>. 48ul) |. (hi <<. 16ul) in
+  let f2 = (t3 >>. 4ul) &. u64 0x3ffffff in
+
+  Math.Lemmas.lemma_div_lt (v lo) 64 48;
+  logor_disjoint (lo >>. 48ul) (hi <<. 16ul) 16;
+  assert (v t3 == v lo / pow2 48 + (v hi * pow2 16) % pow2 64);
+
+  calc (==) {
+    (v lo / pow2 48 + (v hi * pow2 16) % pow2 64) / pow2 4;
+    (==) { Math.Lemmas.pow2_multiplication_modulo_lemma_2 (v hi) 64 16 }
+    (v lo / pow2 48 + (v hi % pow2 48) * pow2 16) / pow2 4;
+    (==) { Math.Lemmas.pow2_plus 12 4 }
+    (v lo / pow2 48 + (v hi % pow2 48) * pow2 12 * pow2 4) / pow2 4;
+    (==) { Math.Lemmas.division_addition_lemma (v lo / pow2 48) (pow2 4) ((v hi % pow2 48) * pow2 12) }
+    (v lo / pow2 48) / pow2 4 + (v hi % pow2 48) * pow2 12;
+    (==) { Math.Lemmas.division_multiplication_lemma (v lo) (pow2 48) (pow2 4); Math.Lemmas.pow2_plus 48 4 }
+    v lo / pow2 52 + (v hi % pow2 48) * pow2 12;
+    (==) { Math.Lemmas.pow2_multiplication_modulo_lemma_2 (v hi) 60 12 }
+    v lo / pow2 52 + (v hi * pow2 12) % pow2 60;
+  };
+  assert (v (t3 >>. 4ul) == v lo / pow2 52 + (v hi * pow2 12) % pow2 60);
+  assert_norm (0x3ffffff = pow2 26 - 1);
+  mod_mask_lemma (t3 >>. 4ul) 26ul;
+  assert (v (mod_mask #U64 #SEC 26ul) == v (u64 0x3ffffff));
+  assert (v f2 == v (t3 >>. 4ul) % pow2 26);
+
+  calc (==) {
+    (v lo / pow2 52 + (v hi * pow2 12) % pow2 60) % pow2 26;
+    (==) { Math.Lemmas.lemma_mod_plus_distr_r (v lo / pow2 52) ((v hi * pow2 12) % pow2 60) (pow2 26) }
+    (v lo / pow2 52 + (v hi * pow2 12) % pow2 60 % pow2 26) % pow2 26;
+    (==) { Math.Lemmas.pow2_modulo_modulo_lemma_1 (v hi * pow2 12) 26 60 }
+    (v lo / pow2 52 + (v hi * pow2 12) % pow2 26) % pow2 26;
+    (==) { Math.Lemmas.pow2_multiplication_modulo_lemma_2 (v hi) 26 12 }
+    (v lo / pow2 52 + (v hi % pow2 14) * pow2 12) % pow2 26;
+    (==) { load_tup64_4_compact_lemma_f2_mod lo hi }
+    v lo / pow2 52 + (v hi % pow2 14) * pow2 12;
+  };
+  assert (v f2 == v lo / pow2 52 + (v hi % pow2 14) * pow2 12)
+
+
+val load_tup64_4_compact_lemma_f3: lo:uint64 -> hi:uint64 -> Lemma
+  (let t3 = (lo >>. 48ul) |. (hi <<. 16ul) in
+   v ((t3 >>. 30ul) &. u64 0x3ffffff) == (v hi / pow2 14) % pow2 26)
+let load_tup64_4_compact_lemma_f3 lo hi =
+  let t3 = (lo >>. 48ul) |. (hi <<. 16ul) in
+  let f3 = (t3 >>. 30ul) &. u64 0x3ffffff in
+
+  Math.Lemmas.lemma_div_lt (v lo) 64 48;
+  logor_disjoint (lo >>. 48ul) (hi <<. 16ul) 16;
+  assert (v t3 == v lo / pow2 48 + (v hi * pow2 16) % pow2 64);
+
+  calc (==) {
+    (v lo / pow2 48 + (v hi * pow2 16) % pow2 64) / pow2 30;
+    (==) { Math.Lemmas.pow2_multiplication_modulo_lemma_2 (v hi) 64 16 }
+    (v lo / pow2 48 + (v hi % pow2 48) * pow2 16) / pow2 30;
+    (==) { Math.Lemmas.pow2_plus 16 14;
+      Math.Lemmas.division_multiplication_lemma (v lo / pow2 48 + (v hi % pow2 48) * pow2 16) (pow2 16) (pow2 14) }
+    ((v lo / pow2 48 + (v hi % pow2 48) * pow2 16) / pow2 16) / pow2 14;
+    (==) { Math.Lemmas.division_addition_lemma (v lo / pow2 48) (pow2 16) (v hi % pow2 48) }
+    ((v lo / pow2 48) / pow2 16 + (v hi % pow2 48)) / pow2 14;
+    (==) { Math.Lemmas.division_multiplication_lemma (v lo) (pow2 48) (pow2 16); Math.Lemmas.pow2_plus 48 16 }
+    (v lo / pow2 64 + (v hi % pow2 48)) / pow2 14;
+    (==) { Math.Lemmas.small_div (v lo) (pow2 64) }
+    (v hi % pow2 48) / pow2 14;
+    (==) { Math.Lemmas.pow2_modulo_division_lemma_1 (v hi) 14 48 }
+    (v hi / pow2 14) % pow2 34;
+    };
+
+  assert_norm (0x3ffffff = pow2 26 - 1);
+  mod_mask_lemma (t3 >>. 4ul) 26ul;
+  assert (v (mod_mask #U64 #SEC 26ul) == v (u64 0x3ffffff));
+  assert (v f3 == v (t3 >>. 30ul) % pow2 26);
+  assert (v f3 == ((v hi / pow2 14) % pow2 34) % pow2 26);
+  Math.Lemmas.pow2_modulo_modulo_lemma_1 (v hi / pow2 14) 26 34
+
+val load_tup64_4_compact_lemma: lo:uint64 -> hi:uint64 ->
+  Lemma (load_tup64_4_compact lo hi == load_tup64_lemma lo hi)
+let load_tup64_4_compact_lemma lo hi =
+  let (l0, l1, l2, l3, l4) = load_tup64_4_compact lo hi in
+  let (r0, r1, r2, r3, r4) = load_tup64_lemma lo hi in
+  assert (l0 == r0 /\ l1 == r1 /\ l4 == r4);
+
+  let mask26 = u64 0x3ffffff in
+  let t3 = (lo >>. 48ul) |. (hi <<. 16ul) in
+  let l2 = (t3 >>. 4ul) &. mask26 in
+  load_tup64_4_compact_lemma_f2 lo hi;
+  let r2 = (lo >>. 52ul) |. ((hi &. u64 0x3fff) <<. 12ul) in
+  load_tup64_lemma_f2 lo hi;
+  assert (v l2 == v r2);
+
+  let r3 = (hi >>. 14ul) &. mask26 in
+  mod_mask_lemma (hi >>. 14ul) 26ul;
+  assert (v (mod_mask #U64 #SEC 26ul) == v mask26);
+  assert (v r3 == (v hi / pow2 14) % pow2 26);
+
+  let l3 = (t3 >>. 30ul) &. mask26 in
+  load_tup64_4_compact_lemma_f3 lo hi
+
+
 val lemma_store_felem_lo:
     f:tup64_5{tup64_fits5 f (1, 1, 1, 1, 1)}
   -> lo:uint64 ->

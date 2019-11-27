@@ -12,12 +12,6 @@ include Hacl.Spec.Poly1305.Field32xN
 
 #reset-options "--z3rlimit 50 --using_facts_from '* -FStar.Seq' --max_fuel 0 --max_ifuel 0"
 
-val vecv_extensionality: #t:v_inttype -> #w:width -> f1:vec_t t w -> f2:vec_t t w -> Lemma
-  (requires vec_v f1 == vec_v f2)
-  (ensures f1 == f2)
-let vecv_extensionality #t #w f1 f2 = admit()
-
-
 val lemma_prime: unit -> Lemma (pow2 130 % prime = 5)
 let lemma_prime () =
   assert_norm (pow2 130 % prime = 5 % prime);

@@ -308,11 +308,6 @@ let carry_full_felem5 #w (f0, f1, f2, f3, f4) =
   let tmp2,c2 = carry26 f2 c1 in
   let tmp3,c3 = carry26 f3 c2 in
   let tmp4,c4 = carry26 f4 c3 in
-  //[@inline_let]
-  //let tmp0',c5 = carry26 tmp0 (vec_smul_mod c4 (u64 5)) in
-  //[@inline_let]
-  //let tmp1' = vec_add_mod tmp1 c5 in
-  //(tmp0', tmp1', tmp2, tmp3, tmp4)
   [@inline_let]
   let tmp0' = vec_add_mod tmp0 (vec_smul_mod c4 (u64 5)) in
   (tmp0', tmp1, tmp2, tmp3, tmp4)
@@ -363,6 +358,28 @@ let load_felem5 #w lo hi =
   let f3 = vec_and (vec_shift_right hi 14ul) (mask26 w) in
   let f4 = vec_shift_right hi 40ul in
   (f0, f1, f2, f3, f4)
+
+
+inline_for_extraction noextract
+val load_felem5_4: lo:uint64xN 4 -> hi:uint64xN 4 -> f:felem5 4
+let load_felem5_4 lo hi =
+  let mask26 = mask26 4 in
+  let m0 = vec_interleave_low_n 2 lo hi in
+  let m1 = vec_interleave_high_n 2 lo hi in
+  let m2 = cast U64 4 (vec_shift_right (cast U128 2 m0) 48ul) in
+  let m3 = cast U64 4 (vec_shift_right (cast U128 2 m1) 48ul) in
+  let m4 = vec_interleave_high m0 m1 in
+  let t0 = vec_interleave_low m0 m1 in
+  let t3 = vec_interleave_low m2 m3 in
+  let t2 = vec_shift_right t3 4ul in
+  let o2 = vec_and t2 mask26 in
+  let t1 = vec_shift_right t0 26ul in
+  let o1 = vec_and t1 mask26 in
+  let o5 = vec_and t0 mask26 in
+  let t3 = vec_shift_right t3 30ul in
+  let o3 = vec_and t3 mask26 in
+  let o4 = vec_shift_right m4 40ul in
+  (o5, o1, o2, o3, o4)
 
 inline_for_extraction noextract
 val load_acc5_2:

@@ -628,6 +628,116 @@ let load_felem5_lemma #w lo hi =
     load_felem5_lemma_i #w lo hi 3;
     eq_intro (feval5 f) res
 
+val load_felem5_4_interleave: lo:uint64xN 4 -> hi:uint64xN 4 -> Lemma
+  (let m0 = vec_interleave_low_n 2 lo hi in
+   let m1 = vec_interleave_high_n 2 lo hi in
+   let m2 = cast U64 4 (vec_shift_right (cast U128 2 m0) 48ul) in
+   let m3 = cast U64 4 (vec_shift_right (cast U128 2 m1) 48ul) in
+   let m4 = vec_interleave_high m0 m1 in
+   let t0 = vec_interleave_low m0 m1 in
+   let t3 = vec_interleave_low m2 m3 in
+   vec_v m4 == create4 (vec_v lo).[1] (vec_v lo).[3] (vec_v hi).[1] (vec_v hi).[3] /\
+   vec_v t0 == create4 (vec_v lo).[0] (vec_v lo).[2] (vec_v hi).[0] (vec_v hi).[2] /\
+   t3 == vec_or (vec_shift_right t0 48ul) (vec_shift_left m4 16ul))
+
+let load_felem5_4_interleave lo hi =
+  let m0 = vec_interleave_low_n 2 lo hi in
+  vec_interleave_low_n_lemma_uint64_4_2 lo hi;
+  //assert (vec_v m0 == create4 (vec_v lo).[0] (vec_v lo).[1] (vec_v hi).[0] (vec_v hi).[1]);
+  let m1 = vec_interleave_high_n 2 lo hi in
+  vec_interleave_high_n_lemma_uint64_4_2 lo hi;
+  //assert (vec_v m1 == create4 (vec_v lo).[2] (vec_v lo).[3] (vec_v hi).[2] (vec_v hi).[3]);
+
+  let m4 = vec_interleave_high m0 m1 in
+  vec_interleave_high_lemma_uint64_4 m0 m1;
+  //assert (vec_v m4 == create4 (vec_v m0).[1] (vec_v m1).[1] (vec_v m0).[3] (vec_v m1).[3]);
+  assert (vec_v m4 == create4 (vec_v lo).[1] (vec_v lo).[3] (vec_v hi).[1] (vec_v hi).[3]);
+  let t0 = vec_interleave_low m0 m1 in
+  vec_interleave_low_lemma_uint64_4 m0 m1;
+  //assert (vec_v t0 == create4 (vec_v m0).[0] (vec_v m1).[0] (vec_v m0).[2] (vec_v m1).[2]);
+  assert (vec_v t0 == create4 (vec_v lo).[0] (vec_v lo).[2] (vec_v hi).[0] (vec_v hi).[2]);
+
+  let m2 = cast U64 4 (vec_shift_right (cast U128 2 m0) 48ul) in
+  vec_shift_right_uint128_small2 m0 48ul;
+  assert ((vec_v m2).[0] == (((vec_v lo).[0] >>. 48ul) |. ((vec_v lo).[1] <<. 16ul)));
+  assert ((vec_v m2).[2] == (((vec_v hi).[0] >>. 48ul) |. ((vec_v hi).[1] <<. 16ul)));
+  let m3 = cast U64 4 (vec_shift_right (cast U128 2 m1) 48ul) in
+  vec_shift_right_uint128_small2 m1 48ul;
+  assert ((vec_v m3).[0] == (((vec_v lo).[2] >>. 48ul) |. ((vec_v lo).[3] <<. 16ul)));
+  assert ((vec_v m3).[2] == (((vec_v hi).[2] >>. 48ul) |. ((vec_v hi).[3] <<. 16ul)));
+
+  let t3 = vec_interleave_low m2 m3 in
+  vec_interleave_low_lemma_uint64_4 m2 m3;
+  eq_intro (vec_v t3) (vec_v (vec_or (vec_shift_right t0 48ul) (vec_shift_left m4 16ul)));
+  vecv_extensionality t3 (vec_or (vec_shift_right t0 48ul) (vec_shift_left m4 16ul))
+
+noextract
+val load_felem5_4_compact: lo:uint64xN 4 -> hi:uint64xN 4 -> felem5 4
+let load_felem5_4_compact lo hi =
+  let mask26 = mask26 4 in
+  let t3 = vec_or (vec_shift_right lo 48ul) (vec_shift_left hi 16ul) in
+  let o0 = vec_and lo mask26 in
+  let o1 = vec_and (vec_shift_right lo 26ul) mask26 in
+  let o2 = vec_and (vec_shift_right t3 4ul) mask26 in
+  let o3 = vec_and (vec_shift_right t3 30ul) mask26 in
+  let o4 = vec_shift_right hi 40ul in
+  (o0, o1, o2, o3, o4)
+
+val load_felem5_4_compact_lemma_i: lo:uint64xN 4 -> hi:uint64xN 4 -> i:nat{i < 4} ->
+  Lemma
+  (let f = as_tup64_i (load_felem5_4_compact lo hi) i in
+   tup64_fits5 f (1, 1, 1, 1, 1) /\
+   as_nat5 f < pow2 128 /\
+   as_nat5 f % Vec.prime == (uint64xN_v hi).[i] * pow2 64 + (uint64xN_v lo).[i])
+
+let load_felem5_4_compact_lemma_i lo hi i =
+  assert (as_tup64_i (load_felem5_4_compact lo hi) i == load_tup64_4_compact (vec_v lo).[i] (vec_v hi).[i]);
+  load_tup64_4_compact_lemma (vec_v lo).[i] (vec_v hi).[i]
+
+
+val load_felem5_4_lemma: lo:uint64xN 4 -> hi:uint64xN 4 ->
+  Lemma
+  (let f = load_felem5_4_compact lo hi in
+   felem_fits5 f (1, 1, 1, 1, 1) /\
+   felem_less5 f (pow2 128) /\
+   feval5 f == createi #Vec.pfelem 4 (fun i -> (uint64xN_v hi).[i] * pow2 64 + (uint64xN_v lo).[i]))
+
+let load_felem5_4_lemma lo hi =
+  let f = load_felem5_4_compact lo hi in
+  assert_norm (pow2 64 * pow2 64 = pow2 128);
+  assert_norm (pow2 128 < Vec.prime);
+  let res = createi #Vec.pfelem 4
+    (fun i -> (uint64xN_v hi).[i] * pow2 64 + (uint64xN_v lo).[i]) in
+
+  load_felem5_4_compact_lemma_i lo hi 0;
+  load_felem5_4_compact_lemma_i lo hi 1;
+  load_felem5_4_compact_lemma_i lo hi 2;
+  load_felem5_4_compact_lemma_i lo hi 3;
+  eq_intro (feval5 f) res
+
+val load_felem5_le: b:lseq uint8 64 -> Lemma
+  (let lo0 = vec_from_bytes_le U64 4 (sub b 0 32) in
+   let hi0 = vec_from_bytes_le U64 4 (sub b 32 32) in
+   let f = load_felem5_4 lo0 hi0 in
+   felem_fits5 f (1, 1, 1, 1, 1) /\
+   felem_less5 f (pow2 128) /\
+   feval5 f == Vec.load_elem4 b)
+let load_felem5_le b =
+  let lo0 = vec_from_bytes_le U64 4 (sub b 0 32) in
+  let hi0 = vec_from_bytes_le U64 4 (sub b 32 32) in
+  let lo1 = vec_interleave_low_n 2 lo0 hi0 in
+  let hi1 = vec_interleave_high_n 2 lo0 hi0 in
+
+  let lo = vec_interleave_low lo1 hi1 in
+  let hi = vec_interleave_high lo1 hi1 in
+
+  let out = load_felem5_4_compact lo hi in
+  load_felem5_4_interleave lo0 hi0;
+  assert (out == load_felem5_4 lo0 hi0);
+  load_felem5_4_lemma lo hi;
+  Hacl.Impl.Poly1305.Lemmas.uints_from_bytes_le_lemma64_4 b;
+  eq_intro (feval5 out) (Vec.load_elem4 b)
+
 
 val load_acc5_2_lemma:
     f:felem5 2{felem_fits5 f (2, 2, 2, 2, 2)}
