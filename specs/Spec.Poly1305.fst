@@ -13,7 +13,7 @@ open Lib.ByteSequence
 (* Field types and parameters *)
 let prime : pos =
   let p = pow2 130 - 5 in
-  assert_norm (p > 0);
+  assert_norm (p > 1);
   p
 
 let felem = x:nat{x < prime}
