@@ -70,3 +70,6 @@ end
 
 module Blake2b_32 : Blake2b
 module Blake2b_256 : Blake2b
+
+val blake2b_32_bytes : Bytes.t -> Bytes.t -> Bytes.t -> unit
+val blake2b_256_bytes : Bytes.t -> Bytes.t -> Bytes.t -> unit

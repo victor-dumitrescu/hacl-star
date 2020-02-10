@@ -213,3 +213,19 @@ module Blake2b_256 : Blake2b =
   Make_Blake2b (struct
     let blake2b = Hacl_Blake2b_256.hacl_Blake2b_256_blake2b
   end)
+
+(* Experimenting with a Bytes-based interface for Blake2b
+ * !!! The C functions take uint8_t* and Ctyes.ocaml_bytes_start creates a reference to a Bytes.t on the
+ * OCaml heap as a char*, so as far as I understand this will only work when the char type is unsigned char. *)
+let blake2b_32_bytes (key: Bytes.t) (pt: Bytes.t) (output: Bytes.t) =
+  Hacl_Blake2b_32.hacl_Blake2b_32_blake2b_bytes
+    (size_uint32_bytes output) (Ctypes.ocaml_bytes_start output)
+    (size_uint32_bytes pt) (Ctypes.ocaml_bytes_start pt)
+    (size_uint32_bytes key) (Ctypes.ocaml_bytes_start key)
+
+let blake2b_256_bytes (key: Bytes.t) (pt: Bytes.t) (output: Bytes.t) =
+  Hacl_Blake2b_256.hacl_Blake2b_256_blake2b_bytes
+    (size_uint32_bytes output) (Ctypes.ocaml_bytes_start output)
+    (size_uint32_bytes pt) (Ctypes.ocaml_bytes_start pt)
+    (size_uint32_bytes key) (Ctypes.ocaml_bytes_start key)
+
