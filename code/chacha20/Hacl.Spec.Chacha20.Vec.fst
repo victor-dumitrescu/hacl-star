@@ -23,7 +23,7 @@ type counter = size_nat
 type subblock = b:bytes{length b <= size_block}
 
 // Internally, blocks are represented as 16 x 4-byte integers
-let lanes = n:width{n == 1 \/ n == 4 \/ n == 8}
+let lanes = n:width{n == 1 \/ n == 4 \/ n == 8 \/ n == 16}
 inline_for_extraction
 let uint32xN (w:lanes) = vec_t U32 w
 type state (w:lanes) = lseq (uint32xN w) 16
@@ -155,34 +155,112 @@ let transpose8x8 (vs:uint32xN 8 & uint32xN 8 & uint32xN 8 & uint32xN 8 & uint32x
   let v5' = vec_interleave_high v4 v5 in
   let v6' = vec_interleave_low v6 v7 in
   let v7' = vec_interleave_high v6 v7 in
-  let v0'' = vec_interleave_low_n 4 v0' v2' in
-  let v1'' = vec_interleave_high_n 4 v0' v2' in
-  let v2'' = vec_interleave_low_n 4 v1' v3' in
-  let v3'' = vec_interleave_high_n 4 v1' v3' in
-  let v4'' = vec_interleave_low_n 4 v4' v6' in
-  let v5'' = vec_interleave_high_n 4 v4' v6' in
-  let v6'' = vec_interleave_low_n 4 v5' v7' in
-  let v7'' = vec_interleave_high_n 4 v5' v7' in
-  let v0''' = vec_interleave_low_n 2 v0'' v4'' in
-  let v1''' = vec_interleave_high_n 2 v0'' v4'' in
-  let v2''' = vec_interleave_low_n 2 v1'' v5'' in
-  let v3''' = vec_interleave_high_n 2 v1'' v5'' in
-  let v4''' = vec_interleave_low_n 2 v2'' v6'' in
-  let v5''' = vec_interleave_high_n 2 v2'' v6'' in
-  let v6''' = vec_interleave_low_n 2 v3'' v7'' in
-  let v7''' = vec_interleave_high_n 2 v3'' v7'' in
-  (v0''',v2''',v4''',v6''',v1''',v3''',v5''',v7''')
+
+  let v0'' = vec_interleave_low_n 2 v0' v2' in
+  let v2'' = vec_interleave_high_n 2 v0' v2' in
+  let v1'' = vec_interleave_low_n 2 v1' v3' in
+  let v3'' = vec_interleave_high_n 2 v1' v3' in
+  let v4'' = vec_interleave_low_n 2 v4' v6' in
+  let v6'' = vec_interleave_high_n 2 v4' v6' in
+  let v5'' = vec_interleave_low_n 2 v5' v7' in
+  let v7'' = vec_interleave_high_n 2 v5' v7' in
+
+  let v0''' = vec_interleave_low_n 4 v0'' v4'' in
+  let v4''' = vec_interleave_high_n 4 v0'' v4'' in
+  let v1''' = vec_interleave_low_n 4 v1'' v5'' in
+  let v5''' = vec_interleave_high_n 4 v1'' v5'' in
+  let v2''' = vec_interleave_low_n 4 v2'' v6'' in
+  let v6''' = vec_interleave_high_n 4 v2'' v6'' in
+  let v3''' = vec_interleave_low_n 4 v3'' v7'' in
+  let v7''' = vec_interleave_high_n 4 v3'' v7'' in
+  (v0''',v2''',v1''',v3''',v4''',v6''',v5''',v7''')
+
 
 let transpose8 (st:state 8) : state 8 =
   let (v0,v1,v2,v3,v4,v5,v6,v7) = transpose8x8 (st.[0],st.[1],st.[2],st.[3],st.[4],st.[5],st.[6],st.[7]) in
   let (v8,v9,v10,v11,v12,v13,v14,v15) = transpose8x8 (st.[8],st.[9],st.[10],st.[11],st.[12],st.[13],st.[14],st.[15]) in
   create16 v0 v8 v1 v9 v2 v10 v3 v11 v4 v12 v5 v13 v6 v14 v7 v15
 
+
+let transpose16 (st:state 16) : state 16 =
+  let (v0,v1,v2,v3,v4,v5,v6,v7) = (st.[0],st.[1],st.[2],st.[3],st.[4],st.[5],st.[6],st.[7]) in
+  let (v8,v9,v10,v11,v12,v13,v14,v15) = (st.[8],st.[9],st.[10],st.[11],st.[12],st.[13],st.[14],st.[15]) in
+
+  let v0' = vec_interleave_low v0 v1 in
+  let v1' = vec_interleave_high v0 v1 in
+  let v2' = vec_interleave_low v2 v3 in
+  let v3' = vec_interleave_high v2 v3 in
+  let v4' = vec_interleave_low v4 v5 in
+  let v5' = vec_interleave_high v4 v5 in
+  let v6' = vec_interleave_low v6 v7 in
+  let v7' = vec_interleave_high v6 v7 in
+  let v8' = vec_interleave_low v8 v9 in
+  let v9' = vec_interleave_high v8 v9 in
+  let v10' = vec_interleave_low v10 v11 in
+  let v11' = vec_interleave_high v10 v11 in
+  let v12' = vec_interleave_low v12 v13 in
+  let v13' = vec_interleave_high v12 v13 in
+  let v14' = vec_interleave_low v14 v15 in
+  let v15' = vec_interleave_high v14 v15 in
+
+  let v0'' = vec_interleave_low_n 2 v0' v2' in
+  let v2'' = vec_interleave_high_n 2 v0' v2' in
+  let v1'' = vec_interleave_low_n 2 v1' v3' in
+  let v3'' = vec_interleave_high_n 2 v1' v3' in
+  let v4'' = vec_interleave_low_n 2 v4' v6' in
+  let v6'' = vec_interleave_high_n 2 v4' v6' in
+  let v5'' = vec_interleave_low_n 2 v5' v7' in
+  let v7'' = vec_interleave_high_n 2 v5' v7' in
+  let v8'' = vec_interleave_low_n 2 v8' v10' in
+  let v10'' = vec_interleave_high_n 2 v8' v10' in
+  let v9'' = vec_interleave_low_n 2 v9' v11' in
+  let v11'' = vec_interleave_high_n 2 v9' v11' in
+  let v12'' = vec_interleave_low_n 2 v12' v14' in
+  let v14'' = vec_interleave_high_n 2 v12' v14' in
+  let v13'' = vec_interleave_low_n 2 v13' v15' in
+  let v15'' = vec_interleave_high_n 2 v13' v15' in
+
+  let v0' = vec_interleave_low_n 4 v0'' v4'' in
+  let v4' = vec_interleave_high_n 4 v0'' v4'' in
+  let v1' = vec_interleave_low_n 4 v1'' v5'' in
+  let v5' = vec_interleave_high_n 4 v1'' v5'' in
+  let v2' = vec_interleave_low_n 4 v2'' v6'' in
+  let v6' = vec_interleave_high_n 4 v2'' v6'' in
+  let v3' = vec_interleave_low_n 4 v3'' v7'' in
+  let v7' = vec_interleave_high_n 4 v3'' v7'' in
+  let v8' = vec_interleave_low_n 4 v8'' v12'' in
+  let v12' = vec_interleave_high_n 4 v8'' v12'' in
+  let v9' = vec_interleave_low_n 4 v9'' v13'' in
+  let v13' = vec_interleave_high_n 4 v9'' v13'' in
+  let v10' = vec_interleave_low_n 4 v10'' v14'' in
+  let v14' = vec_interleave_high_n 4 v10'' v14'' in
+
+  let v0 = vec_interleave_low_n 8 v0' v8' in
+  let v8 = vec_interleave_high_n 8 v0' v8' in
+  let v1 = vec_interleave_low_n 8 v1' v9' in
+  let v9 = vec_interleave_high_n 8 v1' v9' in
+  let v2 = vec_interleave_low_n 8 v2' v10' in
+  let v10 = vec_interleave_high_n 8 v2' v10' in
+  let v3 = vec_interleave_low_n 8 v3' v11' in
+  let v11 = vec_interleave_high_n 8 v3' v11' in
+  let v4 = vec_interleave_low_n 8 v4' v12' in
+  let v12 = vec_interleave_high_n 8 v4' v12' in
+  let v5 = vec_interleave_low_n 8 v5' v13' in
+  let v13 = vec_interleave_high_n 8 v5' v13' in
+  let v6 = vec_interleave_low_n 8 v6' v14' in
+  let v14 = vec_interleave_high_n 8 v6' v14' in
+  let v7 = vec_interleave_low_n 8 v7' v15' in
+  let v15 = vec_interleave_high_n 8 v7' v15' in
+
+  create16 v0 v2 v1 v3 v4 v6 v5 v7 v8 v10 v9 v11 v12 v14 v13 v15
+
+
 let transpose (#w:lanes) (st:state w) : state w =
   match w with
   | 1 -> transpose1 st
   | 4 -> transpose4 st
   | 8 -> transpose8 st
+  | 16 -> transpose16 st
 
 // let store_block0 (#w:lanes) (st:state w) : Tot block1 =
 //   let bl = create 64 (u8 0) in
