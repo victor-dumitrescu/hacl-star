@@ -152,6 +152,9 @@ endif
 lib/%_stubs.ml lib/%_c_stubs.c: lib_gen/%_gen.exe
 	$(DY)PATH=.:$(OPENSSL_HOME):$$$(DY)PATH $<
 
+# Compiling these files raises the pointer sign warning because the Ctypes declaration for bytes expects a char*, not a uint8_t*
+lib/%_c_stubs.o: CFLAGS += -Wno-pointer-sign
+
 libocamlevercrypt.cmxa: $(ALL_BINDINGS) $(ALL_ML_STUBS) $(ALL_C_STUBS) libevercrypt.$(SO)
 	ocamlfind mklib -o ocamlevercrypt $(filter-out %.so,$^) libevercrypt.a $(MLLDFLAGS)
 
