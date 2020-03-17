@@ -917,8 +917,10 @@ val carry_reduce_felem5_fits_lemma_i0:
    let tmp3,c3 = carry26 f3 c2 in
    let tmp4,c4 = carry26 f4 c3 in
    let res = (tmp0, tmp1, tmp2, tmp3, tmp4) in
-   (if (uint64xN_v f0).[i] < pow2 26 then (uint64xN_v tmp0).[i] < pow2 26 else (uint64xN_v tmp0).[i] <= 46) /\
-   (if (uint64xN_v f0).[i] < pow2 26 then (uint64xN_v c4).[i] = 0 else (uint64xN_v c4).[i] <= 63))
+   (if (uint64xN_v f0).[i] < pow2 26 then
+     (uint64xN_v tmp0).[i] < pow2 26 /\ (uint64xN_v c4).[i] = 0
+   else
+     (uint64xN_v tmp0).[i] <= 46) /\ (uint64xN_v c4).[i] <= 63)
 
 let carry_reduce_felem5_fits_lemma_i0 #w f i =
   let (f0, f1, f2, f3, f4) = f in
@@ -953,7 +955,6 @@ val carry_reduce_felem5_fits_lemma_i1:
    let tmp3,c3 = carry26 f3 c2 in
    let tmp4,c4 = carry26 f4 c3 in
    let res = (tmp0, tmp1, tmp2, tmp3, tmp4) in
-   (uint64xN_v c4).[i] <= 63 /\
    tup64_fits5 (as_tup64_i res i) (1, 1, 1, 1, 1))
 
 let carry_reduce_felem5_fits_lemma_i1 #w f i =
@@ -972,6 +973,33 @@ let carry_reduce_felem5_fits_lemma_i1 #w f i =
   assert (tup64_fits5 (as_tup64_i res i) (1, 1, 1, 1, 1))
 
 
+val carry_reduce_felem5_fits_lemma_i_upd0:
+  #w:lanes -> tmp:felem5 w -> c4:uint64xN w -> i:nat{i < w} -> Lemma
+  (requires
+    tup64_fits5 (as_tup64_i tmp i) (1, 1, 1, 1, 1) /\
+    (let (tmp0, tmp1, tmp2, tmp3, tmp4) = tmp in
+    ((uint64xN_v tmp0).[i] < pow2 26 /\ (uint64xN_v c4).[i] = 0) \/
+    ((uint64xN_v tmp0).[i] <= 46 /\ (uint64xN_v c4).[i] <= 63)))
+  (ensures
+    (let (tmp0, tmp1, tmp2, tmp3, tmp4) = tmp in
+     let tmp0' = vec_add_mod tmp0 (vec_smul_mod c4 (u64 5)) in
+     let res = (tmp0', tmp1, tmp2, tmp3, tmp4) in
+     tup64_fits5 (as_tup64_i res i) (1, 1, 1, 1, 1)))
+
+let carry_reduce_felem5_fits_lemma_i_upd0 #w tmp c4 i =
+  assert_norm (max26 == pow2 26 - 1);
+  let (tmp0, tmp1, tmp2, tmp3, tmp4) = tmp in
+  let tmp0' = vec_add_mod tmp0 (vec_smul_mod c4 (u64 5)) in
+  let res = (tmp0', tmp1, tmp2, tmp3, tmp4) in
+
+  assert ((uint64xN_v c4).[i] <= 63);
+  FStar.Math.Lemmas.modulo_lemma ((uint64xN_v c4).[i] * 5) (pow2 64);
+  assert ((uint64xN_v (vec_smul_mod c4 (u64 5))).[i] == (uint64xN_v c4).[i] * 5);
+  let tmp0' = vec_add_mod tmp0 (vec_smul_mod c4 (u64 5)) in
+  assert ((uint64xN_v tmp0').[i] < pow2 26);
+  assert (tup64_fits5 (as_tup64_i res i) (1, 1, 1, 1, 1))
+
+
 val carry_reduce_felem5_fits_lemma_i:
     #w:lanes
   -> f:felem5 w{acc_inv_t f}
@@ -986,14 +1014,10 @@ let carry_reduce_felem5_fits_lemma_i #w f i =
   let tmp2,c2 = carry26 f2 c1 in
   let tmp3,c3 = carry26 f3 c2 in
   let tmp4,c4 = carry26 f4 c3 in
-  carry_reduce_felem5_fits_lemma_i1 #w f i;
-
-  FStar.Math.Lemmas.modulo_lemma ((uint64xN_v c4).[i] * 5) (pow2 64);
-  assert ((uint64xN_v (vec_smul_mod c4 (u64 5))).[i] == (uint64xN_v c4).[i] * 5);
-  let tmp0' = vec_add_mod tmp0 (vec_smul_mod c4 (u64 5)) in
   carry_reduce_felem5_fits_lemma_i0 #w f i;
-  let res = (tmp0', tmp1, tmp2, tmp3, tmp4) in
-  assert (tup64_fits5 (as_tup64_i res i) (1, 1, 1, 1, 1))
+  carry_reduce_felem5_fits_lemma_i1 #w f i;
+  let tmp = (tmp0, tmp1, tmp2, tmp3, tmp4) in
+  carry_reduce_felem5_fits_lemma_i_upd0 #w tmp c4 i
 #pop-options
 
 
