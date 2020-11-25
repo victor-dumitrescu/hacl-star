@@ -11,6 +11,7 @@ TARGETS = $(filter-out gf128-%, $(patsubst %.c,%.exe,$(wildcard *.c)))
 CFLAGS := -I$(KREMLIN_HOME)/include -I../dist/gcc-compatible \
   -I$(KREMLIN_HOME)/kremlib/dist/minimal \
   -I../secure_api/merkle_tree \
+  -Iuecc \
   -O3 -march=native -mtune=native $(CFLAGS)
 
 all: $(TARGETS)
@@ -34,7 +35,7 @@ arm: chacha20-arm-test.test poly1305-arm-test.test blake2-arm-test.test curve255
 curve64-rfc.exe: $(patsubst %.c,%.o,$(wildcard rfc7748_src/*.c))
 
 %.exe: %.o
-	$(CC) $(CFLAGS) $(LDFLAGS) $^ ../dist/gcc-compatible/libevercrypt.a -o $@ -lcrypto
+	$(CC) $(CFLAGS) $(LDFLAGS) $^ uecc/uECC.o ../dist/gcc-compatible/libevercrypt.a -o $@ -lcrypto
 
 # Running tests
 

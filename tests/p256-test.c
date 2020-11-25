@@ -19,6 +19,7 @@
 #include "Hacl_P256.h"
 #include "Lib_RandomBuffer_System.h"
 
+#include "uECC.h"
 
 uint8_t
 prKey[32U] =
@@ -93,7 +94,7 @@ bool print_result(int in_len, uint8_t* comp, uint8_t* exp) {
 }
 
 
-#define ROUNDS 16384
+#define ROUNDS 1000 //16384
 #define SIZE   16384
 
 bool testImplementationHacl()
@@ -113,7 +114,8 @@ bool testImplementationHacl()
     memcpy(s, result+32, 32);
 
     bool s4 = Hacl_P256_ecdsa_verif_without_hash(32, digest, pubKey, r, s);
-	return s0 && s1 && s2 && s3 && s4 && flag;
+    bool s5 = uECC_verify(pubKey, digest, 32, result, uECC_secp256r1 ());
+	return s0 && s1 && s2 && s3 && s4 && s5 && flag;
 }
 
 void debug_print_buf(uint8_t* buf, size_t len) {
@@ -179,6 +181,51 @@ struct Result benchmarkP256Verification(cycles a, cycles b, clock_t t1, clock_t 
     return res;
 }
 
+struct Result benchmarkUeccP256Verification(cycles a, cycles b, clock_t t1, clock_t t2)
+{
+    uint8_t* sk = (uint8_t*) malloc (sizeof (uint8_t) * 32);
+    memset(sk, 0x00, 32);
+    while (!Hacl_P256_is_more_than_zero_less_than_order(sk)) {
+        read_random_bytes(32, sk);
+    };
+
+    uint8_t* pk = (uint8_t*) malloc (sizeof (uint8_t) * 64);
+    assert(Hacl_P256_ecp256dh_i(pk, sk));
+    assert(Hacl_P256_verify_q(pk));
+
+    uint8_t* k = (uint8_t*) malloc (sizeof (uint8_t) * 32);
+    memset(k,0x00,32);
+    while (!Hacl_P256_is_more_than_zero_less_than_order(k)) {
+        read_random_bytes(32, k);
+    };
+
+    uint8_t* msg = (uint8_t*) malloc (sizeof (uint8_t) * 256);
+    read_random_bytes(256, msg);
+
+    uint8_t* sig = (uint8_t*) malloc (sizeof (uint8_t) * 64);
+    memset(sig, 0x00, 64);
+    assert(Hacl_P256_ecdsa_sign_p256_without_hash(sig, 256, msg, sk, k));
+
+	t1 = clock();
+  	a = cpucycles_begin();
+    int result = uECC_verify(pk, msg, 256, sig, uECC_secp256r1 ());
+	b = cpucycles_end();
+	t2 = clock();
+	clock_t tdiff = t2 - t1;
+	cycles cdiff = b - a;
+
+    assert(result == 1);
+
+    free(sk);
+    free(pk);
+    free(k);
+    free(msg);
+    free(sig);
+
+    struct Result res = { tdiff, cdiff };
+    return res;
+}
+
 
 void handleErrors()
 {
@@ -196,13 +243,22 @@ int main()
   	cycles a,b;
 	clock_t t1,t2;
 
-    struct Result total_res = { 0, 0 };
+    struct Result total_res_hacl = { 0, 0 };
 
   	for (int j = 0; j < ROUNDS; j++) {
         struct Result res = benchmarkP256Verification(a, b, t1, t2);
-        total_res.clock += res.clock;
-        total_res.cycles += res.cycles;
+        total_res_hacl.clock += res.clock;
+        total_res_hacl.cycles += res.cycles;
     }
+
+    struct Result total_res_uecc = { 0, 0 };
+
+  	for (int j = 0; j < ROUNDS; j++) {
+        struct Result res = benchmarkUeccP256Verification(a, b, t1, t2);
+        total_res_uecc.clock += res.clock;
+        total_res_uecc.cycles += res.cycles;
+    }
+
 
 	uint8_t* result = (uint8_t*) malloc (sizeof (uint8_t) * 64);
 
@@ -261,5 +317,10 @@ int main()
 	print_time(count,tdiff3,cdiff3);
 
     printf("Hacl_P256_ecdsa_verif_without_hash randomized\n");
-    print_time(count, total_res.clock, total_res.cycles);
+    print_time(count, total_res_hacl.clock, total_res_hacl.cycles);
+    printf("avg time per function call: %" PRIu64 " ms\n", (uint64_t)total_res_hacl.clock/ROUNDS);
+
+    printf("uECC_verify randomized\n");
+    print_time(count, total_res_uecc.clock, total_res_uecc.cycles);
+    printf("avg time per function call: %" PRIu64 " ms \n", (uint64_t)total_res_uecc.clock/ROUNDS);
 }
