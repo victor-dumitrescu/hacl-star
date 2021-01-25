@@ -2261,6 +2261,206 @@ ecdsa_verification_(
   return result;
 }
 
+static bool
+ecdsa_verification_no_check_(
+  Spec_ECDSA_hash_alg_ecdsa alg,
+  uint64_t *pubKey,
+  uint64_t *r,
+  uint64_t *s,
+  uint32_t mLen,
+  uint8_t *m
+)
+{
+  uint64_t tempBufferU64[120U] = { 0U };
+  uint64_t *publicKeyBuffer = tempBufferU64;
+  uint64_t *hashAsFelem = tempBufferU64 + (uint32_t)12U;
+  uint64_t *tempBuffer = tempBufferU64 + (uint32_t)16U;
+  uint64_t *xBuffer = tempBufferU64 + (uint32_t)116U;
+  bufferToJac(pubKey, publicKeyBuffer);
+  bool publicKeyCorrect = true;
+  if (publicKeyCorrect == false)
+  {
+    return false;
+  }
+  bool isRCorrect = isMoreThanZeroLessThanOrderMinusOne(r);
+  bool isSCorrect = isMoreThanZeroLessThanOrderMinusOne(s);
+  bool step1 = isRCorrect && isSCorrect;
+  if (step1 == false)
+  {
+    return false;
+  }
+  uint8_t tempBufferU8[64U] = { 0U };
+  uint8_t *bufferU1 = tempBufferU8;
+  uint8_t *bufferU2 = tempBufferU8 + (uint32_t)32U;
+  uint32_t sz;
+  if (alg.tag == Spec_ECDSA_NoHash)
+  {
+    sz = mLen;
+  }
+  else if (alg.tag == Spec_ECDSA_Hash)
+  {
+    Spec_Hash_Definitions_hash_alg a = alg._0;
+    switch (a)
+    {
+      case Spec_Hash_Definitions_MD5:
+        {
+          sz = (uint32_t)16U;
+          break;
+        }
+      case Spec_Hash_Definitions_SHA1:
+        {
+          sz = (uint32_t)20U;
+          break;
+        }
+      case Spec_Hash_Definitions_SHA2_224:
+        {
+          sz = (uint32_t)28U;
+          break;
+        }
+      case Spec_Hash_Definitions_SHA2_256:
+        {
+          sz = (uint32_t)32U;
+          break;
+        }
+      case Spec_Hash_Definitions_SHA2_384:
+        {
+          sz = (uint32_t)48U;
+          break;
+        }
+      case Spec_Hash_Definitions_SHA2_512:
+        {
+          sz = (uint32_t)64U;
+          break;
+        }
+      case Spec_Hash_Definitions_Blake2S:
+        {
+          sz = (uint32_t)32U;
+          break;
+        }
+      case Spec_Hash_Definitions_Blake2B:
+        {
+          sz = (uint32_t)64U;
+          break;
+        }
+      default:
+        {
+          KRML_HOST_EPRINTF("KreMLin incomplete match at %s:%d\n", __FILE__, __LINE__);
+          KRML_HOST_EXIT(253U);
+        }
+    }
+  }
+  else
+  {
+    sz = KRML_EABORT(uint32_t, "unreachable (pattern matches are exhaustive in F*)");
+  }
+  KRML_CHECK_SIZE(sizeof (uint8_t), sz);
+  uint8_t mHash[sz];
+  memset(mHash, 0U, sz * sizeof (uint8_t));
+  if (alg.tag == Spec_ECDSA_NoHash)
+  {
+    memcpy(mHash, m, sz * sizeof (uint8_t));
+  }
+  else if (alg.tag == Spec_ECDSA_Hash)
+  {
+    Spec_Hash_Definitions_hash_alg a = alg._0;
+    switch (a)
+    {
+      case Spec_Hash_Definitions_SHA2_256:
+        {
+          Hacl_Hash_SHA2_hash_256(m, mLen, mHash);
+          break;
+        }
+      case Spec_Hash_Definitions_SHA2_384:
+        {
+          Hacl_Hash_SHA2_hash_384(m, mLen, mHash);
+          break;
+        }
+      case Spec_Hash_Definitions_SHA2_512:
+        {
+          Hacl_Hash_SHA2_hash_512(m, mLen, mHash);
+          break;
+        }
+      default:
+        {
+          KRML_HOST_EPRINTF("KreMLin incomplete match at %s:%d\n", __FILE__, __LINE__);
+          KRML_HOST_EXIT(253U);
+        }
+    }
+  }
+  else
+  {
+    KRML_HOST_EPRINTF("KreMLin abort at %s:%d\n%s\n",
+      __FILE__,
+      __LINE__,
+      "unreachable (pattern matches are exhaustive in F*)");
+    KRML_HOST_EXIT(255U);
+  }
+  uint8_t *cutHash = mHash;
+  Hacl_Impl_P256_LowLevel_toUint64ChangeEndian(cutHash, hashAsFelem);
+  reduction_prime_2prime_order(hashAsFelem, hashAsFelem);
+  uint64_t tempBuffer1[12U] = { 0U };
+  uint64_t *inverseS = tempBuffer1;
+  uint64_t *u1 = tempBuffer1 + (uint32_t)4U;
+  uint64_t *u2 = tempBuffer1 + (uint32_t)8U;
+  fromDomainImpl(s, inverseS);
+  montgomery_ladder_exponent(inverseS);
+  multPowerPartial(inverseS, hashAsFelem, u1);
+  multPowerPartial(inverseS, r, u2);
+  Hacl_Impl_P256_LowLevel_changeEndian(u1);
+  Hacl_Impl_P256_LowLevel_changeEndian(u2);
+  Hacl_Impl_P256_LowLevel_toUint8(u1, bufferU1);
+  Hacl_Impl_P256_LowLevel_toUint8(u2, bufferU2);
+  uint64_t pointSum[12U] = { 0U };
+  uint64_t points[24U] = { 0U };
+  uint64_t *buff = tempBuffer + (uint32_t)12U;
+  uint64_t *pointU1G = points;
+  uint64_t *pointU2Q0 = points + (uint32_t)12U;
+  secretToPublicWithoutNorm(pointU1G, bufferU1, tempBuffer);
+  scalarMultiplicationWithoutNorm(publicKeyBuffer, pointU2Q0, bufferU2, tempBuffer);
+  uint64_t *pointU1G0 = points;
+  uint64_t *pointU2Q = points + (uint32_t)12U;
+  uint64_t tmp[112U] = { 0U };
+  uint64_t *tmpForNorm = tmp;
+  uint64_t *result0Norm = tmp + (uint32_t)88U;
+  uint64_t *result1Norm = tmp + (uint32_t)100U;
+  uint64_t *pointU1G1 = points;
+  uint64_t *pointU2Q1 = points + (uint32_t)12U;
+  norm(pointU1G1, result0Norm, tmpForNorm);
+  norm(pointU2Q1, result1Norm, tmpForNorm);
+  uint64_t *x0 = result0Norm;
+  uint64_t *y0 = result0Norm + (uint32_t)4U;
+  uint64_t *z0 = result0Norm + (uint32_t)8U;
+  uint64_t *x1 = result1Norm;
+  uint64_t *y1 = result1Norm + (uint32_t)4U;
+  uint64_t *z1 = result1Norm + (uint32_t)8U;
+  bool xEqual = compare_felem_bool(x0, x1);
+  bool yEqual = compare_felem_bool(y0, y1);
+  bool zEqual = compare_felem_bool(z0, z1);
+  bool equalX = xEqual && yEqual && zEqual;
+  bool equalX0 = equalX;
+  if (equalX0)
+  {
+    point_double(pointU1G0, pointSum, buff);
+  }
+  else
+  {
+    point_add(pointU1G0, pointU2Q, pointSum, buff);
+  }
+  norm(pointSum, pointSum, buff);
+  bool resultIsPAI = isPointAtInfinityPublic(pointSum);
+  uint64_t *xCoordinateSum = pointSum;
+  memcpy(xBuffer, xCoordinateSum, (uint32_t)4U * sizeof (uint64_t));
+  reduction_prime_2prime_order(xBuffer, xBuffer);
+  bool r1 = !resultIsPAI;
+  bool state = r1;
+  if (state == false)
+  {
+    return false;
+  }
+  bool result = compare_felem_bool(xBuffer, r);
+  return result;
+}
+
 static uint64_t
 ecdsa_signature_core(
   Spec_ECDSA_hash_alg_ecdsa alg,
@@ -2814,6 +3014,37 @@ Hacl_P256_ecdsa_verif_without_hash(
   bool
   result =
     ecdsa_verification_(((Spec_ECDSA_hash_alg_ecdsa){ .tag = Spec_ECDSA_NoHash }),
+      publicKeyAsFelem,
+      rAsFelem,
+      sAsFelem,
+      mLen,
+      m);
+  return result;
+}
+
+bool
+Hacl_P256_ecdsa_verif_without_hash_no_check(
+  uint32_t mLen,
+  uint8_t *m,
+  uint8_t *pubKey,
+  uint8_t *r,
+  uint8_t *s
+)
+{
+  uint64_t publicKeyAsFelem[8U] = { 0U };
+  uint64_t *publicKeyFelemX = publicKeyAsFelem;
+  uint64_t *publicKeyFelemY = publicKeyAsFelem + (uint32_t)4U;
+  uint64_t rAsFelem[4U] = { 0U };
+  uint64_t sAsFelem[4U] = { 0U };
+  uint8_t *pubKeyX = pubKey;
+  uint8_t *pubKeyY = pubKey + (uint32_t)32U;
+  Hacl_Impl_P256_LowLevel_toUint64ChangeEndian(pubKeyX, publicKeyFelemX);
+  Hacl_Impl_P256_LowLevel_toUint64ChangeEndian(pubKeyY, publicKeyFelemY);
+  Hacl_Impl_P256_LowLevel_toUint64ChangeEndian(r, rAsFelem);
+  Hacl_Impl_P256_LowLevel_toUint64ChangeEndian(s, sAsFelem);
+  bool
+  result =
+    ecdsa_verification_no_check_(((Spec_ECDSA_hash_alg_ecdsa){ .tag = Spec_ECDSA_NoHash }),
       publicKeyAsFelem,
       rAsFelem,
       sAsFelem,

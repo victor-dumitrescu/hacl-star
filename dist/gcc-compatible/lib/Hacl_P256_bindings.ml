@@ -70,6 +70,12 @@ module Bindings(F:Cstubs.FOREIGN) =
            (ocaml_bytes @->
               (ocaml_bytes @->
                  (ocaml_bytes @-> (ocaml_bytes @-> (returning bool))))))
+    let hacl_P256_ecdsa_verif_without_hash_no_check =
+      foreign "Hacl_P256_ecdsa_verif_without_hash_no_check"
+        (uint32_t @->
+           (ocaml_bytes @->
+              (ocaml_bytes @->
+                 (ocaml_bytes @-> (ocaml_bytes @-> (returning bool))))))
     let hacl_P256_verify_q =
       foreign "Hacl_P256_verify_q" (ocaml_bytes @-> (returning bool))
     let hacl_P256_decompression_not_compressed_form =

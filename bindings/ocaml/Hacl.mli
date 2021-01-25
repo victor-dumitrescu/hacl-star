@@ -73,6 +73,7 @@ module P256 : sig
   val dh_responder : C.t -> C.t -> C.t -> bool
   val valid_sk : C.t -> bool
   val valid_pk : C.t -> bool
+  val verify_no_check : C.t -> C.t -> C.t -> bool
   include ECDSA
   module SHA2_256 : ECDSA
   module SHA2_384 : ECDSA

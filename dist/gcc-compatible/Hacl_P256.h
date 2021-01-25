@@ -219,6 +219,15 @@ Hacl_P256_ecdsa_verif_without_hash(
   uint8_t *s
 );
 
+bool
+Hacl_P256_ecdsa_verif_without_hash_no_check(
+  uint32_t mLen,
+  uint8_t *m,
+  uint8_t *pubKey,
+  uint8_t *r,
+  uint8_t *s
+);
+
 /*
  Public key verification function. 
   

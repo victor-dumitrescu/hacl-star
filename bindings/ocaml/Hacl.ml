@@ -309,6 +309,13 @@ module P256 = struct
     (* Hacl.P256.verify_q *)
     assert (C.size pub = 64);
     Hacl_P256.hacl_P256_verify_q (C.ctypes_buf pub)
+  let verify_no_check pub msg signature =
+    (* Hacl.Interface.P256.ECDSA.ecdsa_verif_without_hash/sha2/sha384 *)
+    assert (C.size signature = 64);
+    assert (C.size pub = 64);
+    assert (C.size msg >= 32);
+    let r, s = C.sub signature 0 32, C.sub signature 32 32 in
+    Hacl_P256.hacl_P256_ecdsa_verif_without_hash_no_check (C.size_uint32 msg) (C.ctypes_buf msg) (C.ctypes_buf pub) (C.ctypes_buf r) (C.ctypes_buf s)
   module NoHash = Make_ECDSA (struct
       let min_msg_size = 32
       let sign = Hacl_P256.hacl_P256_ecdsa_sign_p256_without_hash
